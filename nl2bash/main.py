@@ -1,10 +1,19 @@
+import os
 from flask import Flask, request, jsonify, render_template
-from transformers import pipeline
+import google.generativeai as genai
 
 app = Flask(__name__)
 
-# Load the model
-translator = pipeline("text2text-generation", model="t5-small")
+# Configure the Gemini API
+try:
+    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+except KeyError:
+    print("Please set the GEMINI_API_KEY environment variable.")
+    exit(1)
+
+
+# Create the model
+model = genai.GenerativeModel('gemini-1.0-pro')
 
 @app.route('/')
 def index():
@@ -33,8 +42,8 @@ Bash: find . -name "*.py"
 
 Query: {query}
 Bash:"""
-        result = translator(prompt, max_length=128, num_beams=5, early_stopping=True)
-        bash_command = result[0]['generated_text']
+        response = model.generate_content(prompt)
+        bash_command = response.text
         return jsonify({'bash_command': bash_command})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
